@@ -1,60 +1,87 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <title>Hello, AR World! • A-Frame</title>
-    <meta name="description" content="Hello, AR World! • A-Frame">
-    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
-    <!-- script src="https://aframe.io/aframe/dist/aframe-master.min.js"></script -->
-    <script>
-      AFRAME.registerComponent('follow-shadow', {
-        schema: {type: 'selector'},
-        init() {this.el.object3D.renderOrder = -1;},
-        tick() {
-          if (this.data) {
-            this.el.object3D.position.copy(this.data.object3D.position);
-            this.el.object3D.position.y-=0.001; // stop z-fighting
-          }
+<head>
+  <meta charset="utf-8">
+  <title>Winter AR Scene • A-Frame</title>
+  <meta name="description" content="Winter AR Scene with snowmen and pine trees">
+  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+  <script>
+    // 阴影跟随模板
+    AFRAME.registerComponent('follow-shadow', {
+      schema: {type: 'selector'},
+      init() { this.el.object3D.renderOrder = -1; },
+      tick() {
+        if (this.data) {
+          this.el.object3D.position.copy(this.data.object3D.position);
+          this.el.object3D.position.y -= 0.001; // 防止 z-fighting
         }
-      });
-      AFRAME.registerComponent('spawn-tree-on-tap', {
-        init: function () {
-          const objectsEl = document.querySelector('#objects');
-          const templateTree = document.querySelector('#pinetree');
+      }
+    });
 
-          this.el.addEventListener('click', (evt) => {
-            let newTree = templateTree.cloneNode(true);
-            newTree.setAttribute('visible', true);
+    // 点击生成松树/雪人
+    AFRAME.registerComponent('spawn-on-tap', {
+      init: function () {
+        const objectsEl = document.querySelector('#objects');
+        const templateTree = document.querySelector('#pinetree');
+        const templateSnowman = document.querySelector('#snowman');
 
-            if (evt.detail && evt.detail.intersection) {
-              newTree.setAttribute('position', evt.detail.intersection.point);
-            }
+        this.el.addEventListener('click', (evt) => {
+          if (!evt.detail || !evt.detail.intersection) return;
 
-            objectsEl.appendChild(newTree);
-          });
-        }
-      });
-    </script>
-  </head>
-  <body>
-    <a-scene
-      reflection="directionalLight: a-light[type=directional]"
-      ar-hit-test="target: #objects;"
-      renderer="colorManagement: true; exposure: 1; toneMapping: ACESFilmic"
-      shadow="type: pcfsoft"
-      xr-mode-ui="XRMode: xr"
-    >
-      <a-light type="directional" light="castShadow:true;" position="1 1 1" intensity="1.57" shadow-camera-automatic="#objects"></a-light>
-      <a-camera position="0 0.4 0" wasd-controls="acceleration:10;"></a-camera>
-      <a-entity id="objects" scale="0.2 0.2 0.2" position="0 0 -1" shadow>
-        <a-entity id="pinetree" position="0 0 0" scale="1 1 1">
-          <a-cylinder position="0 0.25 0" radius="0.1" height="1.5" color="#8B4513"></a-cylinder>
-          <a-cone position="0 0.55 0" radius-bottom="0.4" radius-top="0" height="1" color="#0A7F0A"></a-cone>
-          <a-cone position="0 0.8 0" radius-bottom="0.35" radius-top="0" height="0.8" color="#0A7F0A"></a-cone>
-          <a-cone position="0 1.05 0" radius-bottom="0.3" radius-top="0" height="0.6" color="#0A7F0A"></a-cone>
-        </a-entity>
+          const point = evt.detail.intersection.point;
+          // 随机生成松树或雪人
+          const clone = Math.random() < 0.5 ? templateTree.cloneNode(true) : templateSnowman.cloneNode(true);
+          clone.setAttribute('visible', true);
+          clone.setAttribute('position', point);
+          objectsEl.appendChild(clone);
+        });
+      }
+    });
+  </script>
+</head>
+
+<body>
+  <a-scene
+    ar-hit-test="target: #objects;"
+    renderer="colorManagement: true; exposure: 1; toneMapping: ACESFilmic"
+    shadow="type: pcfsoft"
+    xr-mode-ui="XRMode: xr"
+    spawn-on-tap
+  >
+    <!-- 光源 -->
+    <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
+    <a-light type="directional" color="#ffffff" intensity="0.8" position="1 2 1" castShadow="true"></a-light>
+
+    <!-- 相机 -->
+    <a-camera position="0 1.6 0"></a-camera>
+
+    <!-- AR 容器 -->
+    <a-entity id="objects" shadow>
+
+      <!-- 模板松树 -->
+      <a-entity id="pinetree" visible="true" scale="0.2 0.2 0.2">
+        <a-cylinder position="0 0.25 0" radius="0.05" height="0.5" color="#8B4513"></a-cylinder>
+        <a-cone position="0 0.55 0" radius-bottom="0.25" radius-top="0" height="0.4" color="#0A7F0A"></a-cone>
+        <a-cone position="0 0.8 0" radius-bottom="0.2" radius-top="0" height="0.35" color="#0A7F0A"></a-cone>
+        <a-cone position="0 1.05 0" radius-bottom="0.15" radius-top="0" height="0.3" color="#0A7F0A"></a-cone>
       </a-entity>
-      <a-plane follow-shadow="#objects" material="shader:shadow" shadow="cast:false;" rotation="-90 0 0" width="2" height="2"></a-plane>
-    </a-scene>
-  </body>
+
+      <!-- 模板雪人 -->
+      <a-entity id="snowman" visible="true" scale="0.2 0.2 0.2">
+        <!-- 身体 -->
+        <a-sphere position="0 0.25 0" radius="0.15" color="#FFFFFF"></a-sphere>
+        <a-sphere position="0 0.55 0" radius="0.1" color="#FFFFFF"></a-sphere>
+        <a-sphere position="0 0.75 0" radius="0.07" color="#FFFFFF"></a-sphere>
+        <!-- 鼻子 -->
+        <a-cone position="0 0.75 0.07" radius-bottom="0.02" radius-top="0" height="0.05" color="#FFA500" rotation="-90 0 0"></a-cone>
+      </a-entity>
+
+    </a-entity>
+
+    <!-- 地面阴影 -->
+    <a-plane follow-shadow="#objects" material="shader:shadow" shadow="cast:false;" rotation="-90 0 0" width="2" height="2"></a-plane>
+
+    <!-- AR 背景（现实摄像头）无需 <a-sky> -->
+  </a-scene>
+</body>
 </html>
